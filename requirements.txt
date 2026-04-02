@@ -3,5 +3,5 @@ uvicorn[standard]
 asyncpg
 python-dotenv
 pydantic[email]
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
