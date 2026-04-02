@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
 class BusinessBase(BaseModel):
@@ -7,7 +7,7 @@ class BusinessBase(BaseModel):
     business_phone_number: Optional[str] = None
 
 class BusinessCreate(BusinessBase):
-    password_business: str
+    password_business: str = Field(..., max_length=72)
 
 class BusinessUpdate(BaseModel):
     name_business: Optional[str] = None
