@@ -9,8 +9,8 @@ router = APIRouter(prefix="/supplier", tags=["Supplier"])
 
 @router.get("/", response_model=list[SupplierOut], summary="Listado de todos los proveedores de un negocio")
 async def listar_proveedores(
-    conn: asyncpg.Connection = Depends(ger_db),
-    current_payload: dict = Depends(get_suppliers_by_business)
+    conn: asyncpg.Connection = Depends(get_db),
+    current_payload: dict = Depends(get_current_business)
 ):
     id_business = int(current_payload["sub"])
     return await supplier_repo.get_suppliers_by_business(conn, id_business)
