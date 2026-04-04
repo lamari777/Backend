@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.database import connect_db, disconnect_db
-from app.api.endpoints import business
+from app.api.endpoints import business, auth
 
 
 @asynccontextmanager
@@ -28,4 +28,5 @@ async def health_check():
 
 
 # Registrar routers
+app.include_router(auth.router, prefix="/api/v1")
 app.include_router(business.router, prefix="/api/v1")
