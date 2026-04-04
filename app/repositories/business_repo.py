@@ -62,23 +62,25 @@ async def create_business(conn: asyncpg.Connection, business: BusinessCreate) ->
     return dict(row)
 
 async def update_business(conn: asyncpg.Connection, id_business: int, business: BusinessUpdate) -> Optional[dict]:
-    fields = business.model_dump(exclude_none=True)
-    if not fields:
-        return await get_business_by_id(conn, id_business)
-    
-    if "password_business" in fields:
-        fields["password_business"] = hash_password(fields["password_business"])
-        
-    set_clause = ", ".join(f"{key} = ${i+2}" for i, key in enumerate(fields.keys()))
-    values = list(fields.values())
+    new_password = hash_password(business.password_business) if business.password_business else None
 
-    query = f"""
+    row = await conn.fetchrow(
+        """
         UPDATE Business
-        SET {set_clause}
-        WHERE id_business = $1
+        SET 
+            name_business = COALESCE($1, name_business),
+            email_business = COALESCE($2, email_business),
+            password_business = COALESCE($3, password_business),
+            business_phone_number = COALESCE($4, business_phone_number)
+        WHERE id_business = $5
         RETURNING id_business, name_business, email_business, business_phone_number
-    """
-    row = await conn.fetchrow(query, id_business, *values)
+        """,
+        business.name_business,
+        business.email_business,
+        new_password,
+        business.business_phone_number,
+        id_business
+    )
     return dict(row) if row else None
 
 async def delete_business(conn: asyncpg.Connection, id_business: int) -> bool:
