@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import asyncpg
 
-from app.api.dependencies import get_db
+from app.api.dependencies import get_db, get_current_business
 from app.schemas.auth_schema import LoginRequest, TokenResponse
 from app.schemas.business_schema import BusinessCreate, BusinessOut
 from app.repositories import business_repo
@@ -35,3 +35,21 @@ async def login(data: LoginRequest, conn: asyncpg.Connection = Depends(get_db)):
         )
     token = create_access_token(data={"sub": str(business["id_business"])})
     return TokenResponse(access_token=token)
+
+
+@router.get("/me", response_model=BusinessOut, summary="Obtener datos del negocio logueado")
+async def get_me(
+    current_payload: dict = Depends(get_current_business),
+    conn: asyncpg.Connection = Depends(get_db)
+):
+    """Devuelve los datos reales del negocio autenticado mediante el JWT proporcionado en el header."""
+    id_business = int(current_payload["sub"])
+    business = await business_repo.get_business_by_id(conn, id_business)
+    
+    if not business:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="El negocio asociado a este token ya no existe."
+        )
+        
+    return business
