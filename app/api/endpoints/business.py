@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 import asyncpg
 
 from app.api.dependencies import get_db
-from app.schemas.business_schema import BusinessCreate, BusinessUpdate, BusinessOut
+from app.schemas.business_schema import BusinessUpdate, BusinessOut
 from app.repositories import business_repo
 
 router = APIRouter(prefix="/business", tags=["Business"])
@@ -18,12 +18,6 @@ async def obtener_business(id_business: int, conn: asyncpg.Connection = Depends(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Negocio no encontrado")
     return business
 
-@router.post("/", response_model=BusinessOut, status_code=status.HTTP_201_CREATED, summary="Registrar un nuevo negocio")
-async def crear_business(business: BusinessCreate, conn: asyncpg.Connection = Depends(get_db)):
-    try:
-        return await business_repo.create_business(conn, business)
-    except asyncpg.exceptions.UniqueViolationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El email ya está registrado")
 
 @router.patch("/{id_business}", response_model=BusinessOut, summary="Actualizar datos de un negocio")
 async def actualizar_business(id_business: int, business: BusinessUpdate, conn: asyncpg.Connection = Depends(get_db)):

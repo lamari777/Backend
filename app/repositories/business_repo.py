@@ -1,7 +1,7 @@
 import asyncpg
 from typing import Optional
 from app.schemas.business_schema import BusinessCreate, BusinessUpdate
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 
 async def get_all_businesses(conn: asyncpg.Connection) -> list[dict]:
     rows = await conn.fetch("SELECT id_business, name_business, email_business, business_phone_number FROM Business")
@@ -13,6 +13,38 @@ async def get_business_by_id(conn: asyncpg.Connection, id_business: int) -> Opti
         id_business
     )
     return dict(row) if row else None
+
+async def get_business_by_email(conn: asyncpg.Connection, email: str) -> Optional[dict]:
+    """Devuelve el negocio completo (incluida la contraseña hasheada) filtrando por email."""
+    row = await conn.fetchrow(
+        "SELECT id_business, name_business, email_business, password_business, business_phone_number "
+        "FROM Business WHERE email_business = $1",
+        email
+    )
+    return dict(row) if row else None
+
+async def get_business_by_name(conn: asyncpg.Connection, name: str) -> Optional[dict]:
+    """Devuelve el negocio completo (incluida la contraseña hasheada) filtrando por nombre."""
+    row = await conn.fetchrow(
+        "SELECT id_business, name_business, email_business, password_business, business_phone_number "
+        "FROM Business WHERE name_business = $1",
+        name
+    )
+    return dict(row) if row else None
+
+async def authenticate_business(conn: asyncpg.Connection, identifier: str, password: str) -> Optional[dict]:
+    """Busca un negocio por email o nombre y verifica la contraseña.
+    Devuelve el negocio (sin password) si las credenciales son correctas, o None si no.
+    """
+    business = await get_business_by_email(conn, identifier)
+    if not business:
+        business = await get_business_by_name(conn, identifier)
+    if not business:
+        return None
+    if not verify_password(password, business["password_business"]):
+        return None
+    business.pop("password_business", None)
+    return business
 
 async def create_business(conn: asyncpg.Connection, business: BusinessCreate) -> dict:
     hashed_password = hash_password(business.password_business)
