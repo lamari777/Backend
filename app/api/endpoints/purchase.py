@@ -3,7 +3,7 @@ import asyncpg
 from typing import Optional
 
 from app.api.dependencies import get_db, get_current_business
-from app.schemas.purchase_schema import PurchaseCreate, PurchaseUpdate, PurchaseOut
+from app.schemas.purchase_schema import PurchaseCreate, PurchaseOut
 from app.repositories import purchase_repo
 
 router = APIRouter(prefix="/purchase", tags=["Purchase"])
@@ -37,22 +37,6 @@ async def crear_compra(
     id_business = int(current_payload["sub"])
     try:
         return await purchase_repo.create_purchase(conn, id_business, purchase)
-    except asyncpg.exceptions.UniqueViolationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una compra con ese ID en tu negocio")
-
-@router.patch("/{id_purchase}", response_model=PurchaseOut, summary="Actualizar una compra")
-async def actualizar_compra(
-    id_purchase: int, 
-    purchase: PurchaseUpdate, 
-    conn: asyncpg.Connection = Depends(get_db),
-    current_payload: dict = Depends(get_current_business)
-):
-    id_business = int(current_payload["sub"])
-    try:
-        updated = await purchase_repo.update_purchase(conn, id_business, id_purchase, purchase)
-        if not updated:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Compra no encontrada o no pertenece a tu negocio")
-        return updated
     except asyncpg.exceptions.UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una compra con ese ID en tu negocio")
 

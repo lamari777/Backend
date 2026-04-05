@@ -1,6 +1,6 @@
 import asyncpg
 from typing import Optional
-from app.schemas.purchase_schema import PurchaseCreate, PurchaseUpdate, PurchaseOut
+from app.schemas.purchase_schema import PurchaseCreate, PurchaseOut
 
 async def get_purchases_by_business(conn: asyncpg.Connection, id_business: int) -> list[dict]:
     rows = await conn.fetch(
@@ -21,20 +21,9 @@ async def get_purchase_by_id(conn: asyncpg.Connection, id_business: int, id_purc
 async def create_purchase(conn: asyncpg.Connection, id_business: int, purchase: PurchaseCreate) -> Optional[dict]:
     rows = await conn.fetch(
         """
-        INSERT INTO Purchase (id_supplier, purchase_date, id_business)
-        VALUES ($1, $2, $3) RETURNING *
-        """, purchase.id_supplier, purchase.purchase_date, id_business
-    )
-    return dict(rows[0])
-
-async def update_purchase(conn: asyncpg.Connection, id_business: int, id_purchase: int, purchase: PurchaseUpdate) -> Optional[dict]:
-    rows = await conn.fetch(
-        """
-        UPDATE Purchase SET 
-            id_supplier = COALESCE($1, id_supplier), 
-            purchase_date = COALESCE($2, purchase_date)
-        WHERE id_business = $3 AND id_purchase = $4 RETURNING *
-        """, purchase.id_supplier, purchase.purchase_date, id_business, id_purchase
+        INSERT INTO Purchase (purchase_date, id_business)
+        VALUES ($1, $2) RETURNING *
+        """, purchase.purchase_date, id_business
     )
     return dict(rows[0])
 

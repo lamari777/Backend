@@ -3,6 +3,7 @@ from typing import Optional
 
 class PurchaseItemBase(BaseModel):
     id_purchase: int
+    id_supplier: Optional[int] = None
     id_material: int
     quantity_purchased: int
     unit_price_purchased: float
