@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.database import connect_db, disconnect_db
-from app.api.endpoints import business, auth, category, supplier, material
+from app.api.endpoints import business, auth, category, supplier, material, product
 
 
 @asynccontextmanager
@@ -33,3 +33,4 @@ app.include_router(business.router, prefix="/api/v1")
 app.include_router(category.router, prefix="/api/v1")
 app.include_router(supplier.router, prefix="/api/v1")
 app.include_router(material.router, prefix="/api/v1")
+app.include_router(product.router, prefix="/api/v1")
