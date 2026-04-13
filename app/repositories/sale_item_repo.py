@@ -18,14 +18,57 @@ async def get_sale_item_by_id(conn: asyncpg.Connection, id_sale: int, id_sale_it
     )
     return dict(rows[0]) if rows else None
 
-async def create_sale_item(conn: asyncpg.Connection, id_sale: int, sale_item: SaleItemCreate) -> Optional[dict]:
-    rows = await conn.fetch(
-        """
-        INSERT INTO SaleItem (id_sale, id_material, quantity_sold)
-        VALUES ($1, $2, $3) RETURNING *
-        """, id_sale, sale_item.id_material, sale_item.quantity_sold
-    )
-    return dict(rows[0])
+async def create_sale_item(conn: asyncpg.Connection, id_sale: int, id_business: int, sale_item: SaleItemCreate) -> Optional[dict]:
+    """
+    Crea un item de venta y descuenta automáticamente el stock de los lotes (Product)
+    siguiendo la lógica FEFO (First Expired, First Out) y FIFO como fallback.
+    Todo se realiza dentro de una transacción implícita si se llama con una conexión 
+    que ya tiene una transacción abierta, o podemos manejarla aquí.
+    """
+    async with conn.transaction():
+        batches = await conn.fetch(
+            """
+            SELECT batch_number, quantity 
+            FROM Product 
+            WHERE id_material = $1 AND id_business = $2 AND quantity > 0
+            ORDER BY expiration_date ASC NULLS LAST, entry_date ASC
+            FOR UPDATE
+            """,
+            sale_item.id_material, id_business
+        )
+
+        total_available = sum(b['quantity'] for b in batches)
+        if total_available < sale_item.quantity_sold:
+            raise ValueError(f"Stock insuficiente. Disponible: {total_available}, Solicitado: {sale_item.quantity_sold}")
+
+        remaining_to_deduct = sale_item.quantity_sold
+        for batch in batches:
+            if remaining_to_deduct <= 0:
+                break
+            
+            batch_id = batch['batch_number']
+            batch_qty = batch['quantity']
+
+            if batch_qty >= remaining_to_deduct:
+                await conn.execute(
+                    "UPDATE Product SET quantity = quantity - $1 WHERE batch_number = $2",
+                    remaining_to_deduct, batch_id
+                )
+                remaining_to_deduct = 0
+            else:
+                await conn.execute(
+                    "UPDATE Product SET quantity = 0 WHERE batch_number = $2",
+                    batch_id
+                )
+                remaining_to_deduct -= batch_qty
+
+        rows = await conn.fetch(
+            """
+            INSERT INTO SaleItem (id_sale, id_material, quantity_sold)
+            VALUES ($1, $2, $3) RETURNING *
+            """, id_sale, sale_item.id_material, sale_item.quantity_sold
+        )
+        return dict(rows[0])
 
 async def delete_sale_item(conn: asyncpg.Connection, id_sale: int, id_sale_item: int) -> Optional[dict]:
     rows = await conn.fetch(

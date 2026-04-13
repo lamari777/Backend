@@ -47,7 +47,9 @@ async def crear_item_venta(
     id_business = int(current_payload["sub"])
     await verify_sale_ownership(conn, id_business, id_sale)
     try:
-        return await sale_item_repo.create_sale_item(conn, id_sale, item)
+        return await sale_item_repo.create_sale_item(conn, id_sale, id_business, item)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except asyncpg.exceptions.UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un item de venta con ese ID en tu negocio")
 
