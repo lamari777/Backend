@@ -7,14 +7,6 @@ from app.repositories import business_repo
 
 router = APIRouter(prefix="/business", tags=["Business"])
 
-@router.get("/", response_model=list[BusinessOut], summary="Listar todos los negocios")
-async def listar_businesses(
-    conn: asyncpg.Connection = Depends(get_db),
-    current_payload: dict = Depends(get_current_business)
-):
-    return await business_repo.get_all_businesses(conn)
-
-
 @router.patch("/me", response_model=BusinessOut, summary="Actualizar datos de tu negocio")
 async def actualizar_business(
     business: BusinessUpdate, 

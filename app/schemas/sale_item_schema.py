@@ -1,16 +1,17 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class SaleItemBase(BaseModel):
+class SaleItemCreate(BaseModel):
+    """Datos que el cliente envía en el body. id_sale viene del path de la URL."""
+    id_material: int
+    quantity_sold: int
+
+class SaleItemOut(BaseModel):
+    """Datos que devuelve la API, incluyendo los IDs generados por la BD."""
+    id_sale_item: int
     id_sale: int
     id_material: int
     quantity_sold: int
 
-class SaleItemCreate(SaleItemBase):
-    pass
-
-class SaleItemOut(SaleItemBase):
-    id_sale_item: int
-
     class Config:
-        from_attributes = True  
+        from_attributes = True
