@@ -2,19 +2,19 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 
 class SupplierBase(BaseModel):
-    name_supplier: str
-    email_supplier: Optional[EmailStr] = None
-    phone_supplier: str
-    description_supplier: Optional[str] = None
+    name: str
+    email: Optional[EmailStr] = None
+    supplier_phone_number: str
+    description: Optional[str] = None
 
 class SupplierCreate(SupplierBase):
     pass
 
 class SupplierUpdate(SupplierBase):
-    name_supplier: Optional[str] = None
-    email_supplier: Optional[EmailStr] = None
-    phone_supplier: Optional[str] = None
-    description_supplier: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    supplier_phone_number: Optional[str] = None
+    description: Optional[str] = None
 
 class SupplierOut(SupplierBase):
     id_supplier: int

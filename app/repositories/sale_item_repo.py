@@ -26,12 +26,14 @@ async def create_sale_item(conn: asyncpg.Connection, id_sale: int, id_business: 
     que ya tiene una transacción abierta, o podemos manejarla aquí.
     """
     async with conn.transaction():
+        # Ordenamos por fecha de caducidad (FEFO) y luego por fecha de entrada (FIFO).
         batches = await conn.fetch(
             """
-            SELECT batch_number, quantity 
-            FROM Product 
-            WHERE id_material = $1 AND id_business = $2 AND quantity > 0
-            ORDER BY expiration_date ASC NULLS LAST, entry_date ASC
+            SELECT p.batch_number, p.quantity 
+            FROM Product p
+            JOIN Material m ON p.id_material = m.id_material
+            WHERE p.id_material = $1 AND m.id_business = $2 AND p.quantity > 0
+            ORDER BY p.expiration_date ASC NULLS LAST, p.entry_date ASC
             FOR UPDATE
             """,
             sale_item.id_material, id_business
