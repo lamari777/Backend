@@ -33,4 +33,4 @@ async def delete_purchase(conn: asyncpg.Connection, id_business: int, id_purchas
         DELETE FROM Purchase WHERE id_business = $1 AND id_purchase = $2 RETURNING *
         """, id_business, id_purchase
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None

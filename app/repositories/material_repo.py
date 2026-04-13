@@ -42,7 +42,7 @@ async def update_material(conn: asyncpg.Connection, id_business: int, id_materia
         WHERE id_business = $5 AND id_material = $6 RETURNING *
         """, material.name_material, material.barcode, material.base_price, material.id_category, id_business, id_material
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None
 
 async def delete_material(conn: asyncpg.Connection, id_business: int, id_material: int) -> Optional[dict]:
     rows= await conn.fetch(
@@ -50,4 +50,4 @@ async def delete_material(conn: asyncpg.Connection, id_business: int, id_materia
         DELETE FROM Material WHERE id_business = $1 AND id_material = $2 RETURNING *
         """, id_business, id_material
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None

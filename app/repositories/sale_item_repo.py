@@ -13,7 +13,7 @@ async def get_sale_items_by_sale(conn: asyncpg.Connection, id_sale: int) -> list
 async def get_sale_item_by_id(conn: asyncpg.Connection, id_sale: int, id_sale_item: int) -> Optional[dict]:
     rows = await conn.fetch(
         """
-        SELECT SaleItem.*, Material.base_price FROM SaleItem JOIN Material ON SaleItem.id_material = Material.id_materialWHERE id_sale = $1 AND id_sale_item = $2
+        SELECT SaleItem.*, Material.base_price FROM SaleItem JOIN Material ON SaleItem.id_material = Material.id_material WHERE id_sale = $1 AND id_sale_item = $2
         """, id_sale, id_sale_item
     )
     return dict(rows[0]) if rows else None
@@ -33,4 +33,4 @@ async def delete_sale_item(conn: asyncpg.Connection, id_sale: int, id_sale_item:
         DELETE FROM SaleItem WHERE id_sale = $1 AND id_sale_item = $2 RETURNING *
         """, id_sale, id_sale_item
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None

@@ -21,7 +21,7 @@ app = FastAPI(
 )
 
 
-# Health check: útil para monitorizar que la app está viva (Koyeb también lo usará)
+# Health check: útil para monitorizar que la app está viva
 @app.get("/", tags=["Health"])
 async def health_check():
     return {"status": "ok", "message": "API de inventario funcionando correctamente."}

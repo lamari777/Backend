@@ -21,7 +21,7 @@ async def get_supplier_by_id(conn: asyncpg.Connection, id_business: int, id_supp
         WHERE id_business = $1 AND id_supplier = $2
         """, id_business, id_supplier
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None
 
 async def create_supplier(conn: asyncpg.Connection, id_business: int, supplier: SupplierCreate) -> Optional[dict]:
     rows = await conn.fetch(
@@ -43,7 +43,7 @@ async def update_supplier(conn: asyncpg.Connection, id_business: int, id_supplie
         WHERE id_business = $5 AND id_supplier = $6 RETURNING *
         """, supplier.name_supplier, supplier.phone_supplier, supplier.description_supplier, supplier.email_supplier, id_business, id_supplier
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None
 
 async def delete_supplier(conn: asyncpg.Connection, id_business: int, id_supplier: int) -> Optional[dict]:
     rows = await conn.fetch(
@@ -51,4 +51,4 @@ async def delete_supplier(conn: asyncpg.Connection, id_business: int, id_supplie
         DELETE FROM Supplier WHERE id_business = $1 AND id_supplier = $2 RETURNING *
         """, id_business, id_supplier
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None

@@ -38,7 +38,7 @@ async def update_product(conn: asyncpg.Connection, id_business: int, id_product:
         WHERE id_business = $5 AND id_product = $6 RETURNING *
         """, product.id_material, product.expiration_date, product.quantity, product.entry_date, id_business, id_product
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None
 
 async def delete_product(conn: asyncpg.Connection, id_business: int, id_product: int) -> Optional[dict]:
     rows = await conn.fetch(
@@ -46,4 +46,4 @@ async def delete_product(conn: asyncpg.Connection, id_business: int, id_product:
         DELETE FROM Product WHERE id_business = $1 AND id_product = $2 RETURNING *
         """, id_business, id_product
     )
-    return dict(rows[0])
+    return dict(rows[0]) if rows else None
