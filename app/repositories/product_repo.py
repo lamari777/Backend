@@ -46,16 +46,15 @@ async def update_product(conn: asyncpg.Connection, id_business: int, batch_numbe
     rows = await conn.fetch(
         """
         UPDATE Product p SET 
-            id_material = COALESCE($1, p.id_material), 
-            expiration_date = COALESCE($2, p.expiration_date), 
-            quantity = COALESCE($3, p.quantity), 
-            entry_date = COALESCE($4, p.entry_date)
+            expiration_date = COALESCE($1, p.expiration_date), 
+            quantity = COALESCE($2, p.quantity), 
+            entry_date = COALESCE($3, p.entry_date)
         FROM Material m
         WHERE p.id_material = m.id_material 
-          AND m.id_business = $5 
-          AND p.batch_number = $6 
+          AND m.id_business = $4 
+          AND p.batch_number = $5 
         RETURNING p.*, m.id_business
-        """, product.id_material, product.expiration_date, product.quantity, product.entry_date, id_business, batch_number
+        """, product.expiration_date, product.quantity, product.entry_date, id_business, batch_number
     )
     return dict(rows[0]) if rows else None
 

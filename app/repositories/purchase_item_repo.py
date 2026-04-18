@@ -21,9 +21,9 @@ async def get_purchase_item_by_id(conn: asyncpg.Connection, id_purchase: int, id
 async def create_purchase_item(conn: asyncpg.Connection, id_purchase: int, purchase_item: PurchaseItemCreate) -> Optional[dict]:
     rows = await conn.fetch(
         """
-        INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased)
-        VALUES ($1, $2, $3, $4) RETURNING *
-        """, id_purchase, purchase_item.id_material, purchase_item.quantity_purchased, purchase_item.unit_price_purchased
+        INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased, id_supplier)
+        VALUES ($1, $2, $3, $4, $5) RETURNING *
+        """, id_purchase, purchase_item.id_material, purchase_item.quantity_purchased, purchase_item.unit_price_purchased, purchase_item.id_supplier
     )
     return dict(rows[0])
 
