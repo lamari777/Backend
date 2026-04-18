@@ -3,7 +3,7 @@ import asyncpg
 from typing import Optional
 
 from app.api.dependencies import get_db, get_current_business
-from app.schemas.purchase_schema import PurchaseCreate, PurchaseOut
+from app.schemas.purchase_schema import PurchaseCreate, PurchaseOut, PurchaseWithItemsCreate
 from app.repositories import purchase_repo
 
 router = APIRouter(prefix="/purchase", tags=["Purchase"])
@@ -39,6 +39,20 @@ async def crear_compra(
         return await purchase_repo.create_purchase(conn, id_business, purchase)
     except asyncpg.exceptions.UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una compra con ese ID en tu negocio")
+
+@router.post("/with-items/", response_model=PurchaseOut, status_code=status.HTTP_201_CREATED, summary="Crear compra con items atómicamente")
+async def crear_compra_con_items(
+    purchase: PurchaseWithItemsCreate, 
+    conn: asyncpg.Connection = Depends(get_db),
+    current_payload: dict = Depends(get_current_business)
+):
+    id_business = int(current_payload["sub"])
+    try:
+        return await purchase_repo.create_purchase_with_items(conn, id_business, purchase)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Hubo un problema de colisión (ID repetido) al crear la compra o productos.")
 
 @router.delete("/{id_purchase}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar una compra")
 async def eliminar_compra(

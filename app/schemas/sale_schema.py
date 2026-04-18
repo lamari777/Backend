@@ -13,3 +13,8 @@ class SaleOut(SaleBase):
     id_business: int 
     class Config:
         from_attributes = True
+
+from app.schemas.sale_item_schema import SaleItemCreate
+
+class SaleWithItemsCreate(SaleBase):
+    items: list[SaleItemCreate]

@@ -25,7 +25,6 @@ async def get_product_by_id(conn: asyncpg.Connection, id_business: int, batch_nu
     return dict(rows[0]) if rows else None
 
 async def create_product(conn: asyncpg.Connection, id_business: int, product: ProductCreate) -> Optional[dict]:
-    # Verificar primero que el material pertenece al negocio
     material_exists = await conn.fetchval(
         "SELECT 1 FROM Material WHERE id_material = $1 AND id_business = $2",
         product.id_material, id_business
@@ -36,10 +35,12 @@ async def create_product(conn: asyncpg.Connection, id_business: int, product: Pr
     rows = await conn.fetch(
         """
         INSERT INTO Product (id_material, expiration_date, quantity, entry_date)
-        VALUES ($1, $2, $3, $4) RETURNING *, $5 as id_business
-        """, product.id_material, product.expiration_date, product.quantity, product.entry_date, id_business
+        VALUES ($1, $2, $3, $4) RETURNING *
+        """, product.id_material, product.expiration_date, product.quantity, product.entry_date
     )
-    return dict(rows[0])
+    result = dict(rows[0])
+    result["id_business"] = id_business
+    return result
 
 async def update_product(conn: asyncpg.Connection, id_business: int, batch_number: int, product: ProductUpdate) -> Optional[dict]:
     rows = await conn.fetch(

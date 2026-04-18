@@ -3,7 +3,7 @@ import asyncpg
 from typing import Optional
 
 from app.api.dependencies import get_db, get_current_business
-from app.schemas.sale_schema import SaleCreate, SaleOut
+from app.schemas.sale_schema import SaleCreate, SaleOut, SaleWithItemsCreate
 from app.repositories import sale_repo
 
 router = APIRouter(prefix="/sale", tags=["Sale"])
@@ -39,6 +39,20 @@ async def crear_venta(
         return await sale_repo.create_sale(conn, id_business, sale)
     except asyncpg.exceptions.UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe una venta con ese ID en tu negocio")
+
+@router.post("/with-items/", response_model=SaleOut, status_code=status.HTTP_201_CREATED, summary="Crear venta con items atómicamente")
+async def crear_venta_con_items(
+    sale_data: SaleWithItemsCreate, 
+    conn: asyncpg.Connection = Depends(get_db),
+    current_payload: dict = Depends(get_current_business)
+):
+    id_business = int(current_payload["sub"])
+    try:
+        return await sale_repo.create_sale_with_items(conn, id_business, sale_data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Hubo un problema de colisión al crear la venta o items.")
 
 @router.delete("/{id_sale}", status_code=status.HTTP_204_NO_CONTENT, summary="Eliminar una venta")
 async def eliminar_venta(
