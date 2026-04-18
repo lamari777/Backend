@@ -52,26 +52,23 @@ async def create_purchase_with_items(conn: asyncpg.Connection, id_business: int,
             )
             if not material_exists:
                 raise ValueError(f"El material {item.id_material} no pertenece a tu negocio o no existe.")
+
+            item_row = await conn.fetchrow(
+                """
+                INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased, id_supplier)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id_purchase_item
+                """, 
+                id_purchase, item.id_material, item.quantity, item.unit_price, item.id_supplier
+            )
+            id_purchase_item = item_row['id_purchase_item']
+
             await conn.execute(
                 """
-                INSERT INTO Product (id_material, expiration_date, quantity, entry_date)
-                VALUES ($1, $2, $3, $4)
-                """, item.id_material, item.expiration_date, item.quantity, item.entry_date
+                INSERT INTO Product (id_material, expiration_date, quantity, entry_date, id_supplier, id_purchase_item)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                """, 
+                item.id_material, item.expiration_date, item.quantity, item.entry_date, item.id_supplier, id_purchase_item
             )
-
-            if item.id_supplier:
-                await conn.execute(
-                    """
-                    INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased, id_supplier)
-                    VALUES ($1, $2, $3, $4, $5)
-                    """, id_purchase, item.id_material, item.quantity, item.unit_price, item.id_supplier
-                )
-            else:
-                await conn.execute(
-                    """
-                    INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased)
-                    VALUES ($1, $2, $3, $4)
-                    """, id_purchase, item.id_material, item.quantity, item.unit_price
-                )
 
         return dict(purchase_row)

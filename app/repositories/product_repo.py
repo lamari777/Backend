@@ -34,9 +34,15 @@ async def create_product(conn: asyncpg.Connection, id_business: int, product: Pr
 
     rows = await conn.fetch(
         """
-        INSERT INTO Product (id_material, expiration_date, quantity, entry_date)
-        VALUES ($1, $2, $3, $4) RETURNING *
-        """, product.id_material, product.expiration_date, product.quantity, product.entry_date
+        INSERT INTO Product (id_material, expiration_date, quantity, entry_date, id_supplier, id_purchase_item)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        """, 
+        product.id_material, 
+        product.expiration_date, 
+        product.quantity, 
+        product.entry_date,
+        product.id_supplier,
+        product.id_purchase_item
     )
     result = dict(rows[0])
     result["id_business"] = id_business
@@ -48,13 +54,22 @@ async def update_product(conn: asyncpg.Connection, id_business: int, batch_numbe
         UPDATE Product p SET 
             expiration_date = COALESCE($1, p.expiration_date), 
             quantity = COALESCE($2, p.quantity), 
-            entry_date = COALESCE($3, p.entry_date)
+            entry_date = COALESCE($3, p.entry_date),
+            id_supplier = COALESCE($4, p.id_supplier),
+            id_purchase_item = COALESCE($5, p.id_purchase_item)
         FROM Material m
         WHERE p.id_material = m.id_material 
-          AND m.id_business = $4 
-          AND p.batch_number = $5 
+          AND m.id_business = $6 
+          AND p.batch_number = $7 
         RETURNING p.*, m.id_business
-        """, product.expiration_date, product.quantity, product.entry_date, id_business, batch_number
+        """, 
+        product.expiration_date, 
+        product.quantity, 
+        product.entry_date, 
+        product.id_supplier,
+        product.id_purchase_item,
+        id_business, 
+        batch_number
     )
     return dict(rows[0]) if rows else None
 
