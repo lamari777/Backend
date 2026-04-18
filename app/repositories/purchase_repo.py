@@ -62,14 +62,14 @@ async def create_purchase_with_items(conn: asyncpg.Connection, id_business: int,
             if item.id_supplier:
                 await conn.execute(
                     """
-                    INSERT INTO PurchaseItem (id_purchase, id_material, quantity_purchased, unit_price_purchased, id_supplier)
+                    INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased, id_supplier)
                     VALUES ($1, $2, $3, $4, $5)
                     """, id_purchase, item.id_material, item.quantity, item.unit_price, item.id_supplier
                 )
             else:
                 await conn.execute(
                     """
-                    INSERT INTO PurchaseItem (id_purchase, id_material, quantity_purchased, unit_price_purchased)
+                    INSERT INTO purchase_item (id_purchase, id_material, quantity_purchased, unit_price_purchased)
                     VALUES ($1, $2, $3, $4)
                     """, id_purchase, item.id_material, item.quantity, item.unit_price
                 )
