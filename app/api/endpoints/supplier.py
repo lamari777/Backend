@@ -22,7 +22,7 @@ async def obtener_proveedor(
     current_payload: dict = Depends(get_current_business)
 ):
     id_business = int(current_payload["sub"])
-    supplier = await supplier_repo.get_supplier_by_id(conn, id_supplier, id_business)
+    supplier = await supplier_repo.get_supplier_by_id(conn, id_business, id_supplier)
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado o no pertenece a tu negocio")
     return supplier
@@ -35,7 +35,7 @@ async def crear_proveedor(
 ):
     id_business = int(current_payload["sub"])
     try:
-        return await supplier_repo.create_supplier(conn, supplier, id_business)
+        return await supplier_repo.create_supplier(conn, id_business, supplier)
     except asyncpg.exceptions.UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un proveedor con ese nombre en tu negocio")
 
@@ -48,7 +48,7 @@ async def actualizar_proveedor(
 ):
     id_business = int(current_payload["sub"])
     try:
-        updated = await supplier_repo.update_supplier(conn, id_supplier, supplier, id_business)
+        updated = await supplier_repo.update_supplier(conn, id_business, id_supplier, supplier)
         if not updated:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado o no pertenece a tu negocio")
         return updated
@@ -62,6 +62,6 @@ async def eliminar_proveedor(
     current_payload: dict = Depends(get_current_business)
 ):
     id_business = int(current_payload["sub"])
-    deleted = await supplier_repo.delete_supplier(conn, id_supplier, id_business)
+    deleted = await supplier_repo.delete_supplier(conn, id_business, id_supplier)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado o no pertenece a tu negocio")
