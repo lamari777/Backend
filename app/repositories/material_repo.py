@@ -32,16 +32,22 @@ async def create_material(conn: asyncpg.Connection, id_business: int, material: 
     return dict(rows[0])
 
 async def update_material(conn: asyncpg.Connection, id_business: int, id_material: int, material: MaterialUpdate) -> Optional[dict]:
-    rows= await conn.fetch(
+    current_cat = await conn.fetchval("SELECT id_category FROM Material WHERE id_material = $1", id_material)
+    update_data = material.model_dump(exclude_unset=True)
+    category_to_save = update_data.get("id_category", current_cat)
+
+    rows = await conn.fetch(
         """
         UPDATE Material SET 
             material_name = COALESCE($1, material_name), 
             bar_code = COALESCE($2, bar_code), 
             base_price = COALESCE($3, base_price), 
-            id_category = COALESCE($4, id_category)
+            id_category = $4
         WHERE id_business = $5 AND id_material = $6 
         RETURNING *
-        """, material.material_name, material.bar_code, material.base_price, material.id_category, id_business, id_material
+        """, 
+        material.material_name, material.bar_code, material.base_price, 
+        category_to_save, id_business, id_material
     )
     return dict(rows[0]) if rows else None
 
