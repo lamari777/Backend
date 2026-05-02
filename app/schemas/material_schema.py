@@ -6,6 +6,7 @@ class MaterialBase(BaseModel):
     bar_code: Optional[str] = None
     base_price: float
     id_category: Optional[int] = None
+    min_stock: Optional[int] = 0
 
 class MaterialCreate(MaterialBase):
     pass
@@ -15,6 +16,8 @@ class MaterialUpdate(MaterialBase):
     bar_code: Optional[str] = None
     base_price: Optional[float] = None
     id_category: Optional[int] = None
+    min_stock: Optional[int] = None
+
 
 class MaterialOut(MaterialBase):
     id_material: int
