@@ -51,7 +51,7 @@ async def create_sale_item(conn: asyncpg.Connection, id_sale: int, id_business: 
             batch_id = batch['batch_number']
             batch_qty = batch['quantity']
 
-            if batch_qty >= remaining_to_deduct:
+            if batch_qty > remaining_to_deduct:
                 await conn.execute(
                     "UPDATE Product SET quantity = quantity - $1 WHERE batch_number = $2",
                     remaining_to_deduct, batch_id
@@ -59,7 +59,7 @@ async def create_sale_item(conn: asyncpg.Connection, id_sale: int, id_business: 
                 remaining_to_deduct = 0
             else:
                 await conn.execute(
-                    "UPDATE Product SET quantity = 0 WHERE batch_number = $1",
+                    "DELETE FROM Product WHERE batch_number = $1",
                     batch_id
                 )
                 remaining_to_deduct -= batch_qty
