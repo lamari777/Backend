@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db.database import connect_db, disconnect_db
-from app.api.endpoints import business, auth, category, supplier, material, product, purchase, purchase_item, sale, sale_item
+from app.api.endpoints import business, auth, category, supplier, material, product, purchase, purchase_item, sale, sale_item, whatsapp
 
 
 @asynccontextmanager
@@ -21,13 +21,11 @@ app = FastAPI(
 )
 
 
-# Health check: útil para monitorizar que la app está viva
 @app.get("/", tags=["Health"])
 async def health_check():
     return {"status": "ok", "message": "API de inventario funcionando correctamente."}
 
 
-# Registrar routers
 app.include_router(business.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(category.router, prefix="/api/v1")
@@ -38,3 +36,4 @@ app.include_router(purchase.router, prefix="/api/v1")
 app.include_router(purchase_item.router, prefix="/api/v1")
 app.include_router(sale.router, prefix="/api/v1")
 app.include_router(sale_item.router, prefix="/api/v1")
+app.include_router(whatsapp.router, prefix="/api/v1")
