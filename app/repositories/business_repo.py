@@ -79,10 +79,20 @@ async def update_business(conn: asyncpg.Connection, id_business: int, business: 
     return dict(row) if row else None
 
 async def get_business_by_phone(conn: asyncpg.Connection, phone_number: str) -> Optional[dict]:
+
+    clean = phone_number.replace("whatsapp:", "").replace("+", "").strip()
+    if clean.startswith("1"):
+        clean = clean[1:]
+    elif clean.startswith("34"):
+        clean = clean[2:]
+
     row = await conn.fetchrow(
-        "SELECT id_business, name_business, email_business, business_phone_number "
-        "FROM Business WHERE business_phone_number = $1",
-        phone_number
+        """
+        SELECT id_business, name_business, email_business, business_phone_number 
+        FROM Business 
+        WHERE REPLACE(REPLACE(business_phone_number, 'whatsapp:', ''), '+', '') LIKE $1
+        """,
+        f"%{clean}"
     )
     return dict(row) if row else None
 
