@@ -13,7 +13,6 @@ async def actualizar_business(
     conn: asyncpg.Connection = Depends(get_db),
     current_payload: dict = Depends(get_current_business)
 ):
-    """Actualiza la información del negocio actualmente autenticado."""
     id_business = int(current_payload["sub"])
     try:
         updated = await business_repo.update_business(conn, id_business, business)
@@ -29,7 +28,6 @@ async def eliminar_business(
     conn: asyncpg.Connection = Depends(get_db),
     current_payload: dict = Depends(get_current_business)
 ):
-    """Elimina la cuenta del negocio actualmente logueado."""
     id_business = int(current_payload["sub"])
     deleted = await business_repo.delete_business(conn, id_business)
     if not deleted:

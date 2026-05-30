@@ -15,7 +15,6 @@ async def get_business_by_id(conn: asyncpg.Connection, id_business: int) -> Opti
     return dict(row) if row else None
 
 async def get_business_by_email(conn: asyncpg.Connection, email: str) -> Optional[dict]:
-    """Devuelve el negocio completo (incluida la contraseña hasheada) filtrando por email."""
     row = await conn.fetchrow(
         "SELECT id_business, name_business, email_business, password_business, business_phone_number "
         "FROM Business WHERE email_business = $1",
@@ -24,7 +23,6 @@ async def get_business_by_email(conn: asyncpg.Connection, email: str) -> Optiona
     return dict(row) if row else None
 
 async def get_business_by_name(conn: asyncpg.Connection, name: str) -> Optional[dict]:
-    """Devuelve el negocio completo (incluida la contraseña hasheada) filtrando por nombre."""
     row = await conn.fetchrow(
         "SELECT id_business, name_business, email_business, password_business, business_phone_number "
         "FROM Business WHERE name_business = $1",
@@ -33,9 +31,6 @@ async def get_business_by_name(conn: asyncpg.Connection, name: str) -> Optional[
     return dict(row) if row else None
 
 async def authenticate_business(conn: asyncpg.Connection, identifier: str, password: str) -> Optional[dict]:
-    """Busca un negocio por email o nombre y verifica la contraseña.
-    Devuelve el negocio (sin password) si las credenciales son correctas, o None si no.
-    """
     business = await get_business_by_email(conn, identifier)
     if not business:
         business = await get_business_by_name(conn, identifier)
@@ -80,6 +75,14 @@ async def update_business(conn: asyncpg.Connection, id_business: int, business: 
         new_password,
         business.business_phone_number,
         id_business
+    )
+    return dict(row) if row else None
+
+async def get_business_by_phone(conn: asyncpg.Connection, phone_number: str) -> Optional[dict]:
+    row = await conn.fetchrow(
+        "SELECT id_business, name_business, email_business, business_phone_number "
+        "FROM Business WHERE business_phone_number = $1",
+        phone_number
     )
     return dict(row) if row else None
 

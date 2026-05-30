@@ -59,3 +59,13 @@ async def delete_material(conn: asyncpg.Connection, id_business: int, id_materia
         """, id_business, id_material
     )
     return dict(rows[0]) if rows else None
+
+async def search_materials_by_name(conn: asyncpg.Connection, id_business: int, search_term: str) -> list[dict]:
+    rows = await conn.fetch(
+        """
+        SELECT id_material, material_name, bar_code, base_price, min_stock, id_category, id_business
+        FROM Material
+        WHERE id_business = $1 AND material_name ILIKE $2
+        """, id_business, f"%{search_term}%"
+    )
+    return [dict(row) for row in rows]
