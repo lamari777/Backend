@@ -3,6 +3,7 @@ import json
 import asyncpg
 from fastapi import APIRouter, Request, Response, Depends, HTTPException, status
 from openai import AsyncOpenAI
+from twilio.rest import Client
 
 from app.db.database import get_pool
 from app.api.dependencies import get_db, get_current_business
@@ -148,6 +149,31 @@ async def generar_respuesta_aclaracion(items: list[dict], nombre_negocio: str) -
         return "Hola, hemos recibido tu pedido pero tenemos dudas con algunos productos. ¿Podrías confirmarnos exactamente qué deseas de nuestro catálogo?"
 
 
+async def generar_respuesta_rechazo(razon_rechazo: str, nombre_negocio: str) -> str:
+    prompt_sistema = (
+        f"Eres el asistente virtual por WhatsApp del negocio '{nombre_negocio}'. "
+        "El dueño acaba de rechazar un pedido de un cliente y ha indicado un motivo. "
+        "Redacta un mensaje amable, directo y corto para el cliente, pidiéndole disculpas "
+        "e informándole del motivo por el cual no se ha podido aceptar su pedido.\n"
+        "IMPORTANTE: Devuelve ÚNICAMENTE el texto del mensaje que se enviará por WhatsApp al cliente, sin comillas adicionales ni texto introductorio tuyo."
+    )
+    
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": f"El motivo de rechazo indicado es: {razon_rechazo}"}
+            ],
+            temperature=0.3,
+            max_tokens=200
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error generando rechazo con IA: {e}", flush=True)
+        return f"Hola, lamentablemente no hemos podido aceptar tu pedido en este momento. Motivo: {razon_rechazo}. Disculpa las molestias."
+
+
 @router.post("/webhook")
 async def twilio_webhook(request: Request):
     try:
@@ -210,6 +236,15 @@ async def twilio_webhook(request: Request):
             tiene_no_encontrado = any(len(item.get("coincidencias", [])) == 0 for item in items_resueltos)
             tiene_ambiguo = any(len(item.get("coincidencias", [])) > 1 for item in items_resueltos)
 
+            if tiene_ambiguo or tiene_no_encontrado:
+                print("Generando respuesta de aclaración con IA...", flush=True)
+                respuesta_texto = await generar_respuesta_aclaracion(items_resueltos, negocio['name_business'])
+                xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>{respuesta_texto}</Message>
+</Response>"""
+                return Response(content=xml_response, media_type="application/xml")
+
             req_data = WhatsAppRequestCreate(
                 request_phone_number=telefono_cliente.replace("whatsapp:", ""),
                 message_id=message_id,
@@ -222,15 +257,6 @@ async def twilio_webhook(request: Request):
                 print(f"Pedido guardado en BD con id={saved.get('id_request')}", flush=True)
             except Exception as db_err:
                 print(f"ERROR al guardar pedido en BD: {db_err}", flush=True)
-
-            if tiene_ambiguo or tiene_no_encontrado:
-                print("Generando respuesta de aclaración con IA...", flush=True)
-                respuesta_texto = await generar_respuesta_aclaracion(items_resueltos, negocio['name_business'])
-                xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-                <Response>
-                    <Message>{respuesta_texto}</Message>
-                </Response>"""
-                return Response(content=xml_response, media_type="application/xml")
 
         return {"status": "ok"}
 
@@ -266,4 +292,29 @@ async def actualizar_estado_pedido(
             updated["json_summary"] = json.loads(updated["json_summary"])
         except Exception:
             pass
+
+    if request_update.status == "Rejected":
+        try:
+            negocio_name = await conn.fetchval("SELECT name_business FROM business WHERE id_business = $1", id_business)
+            respuesta = await generar_respuesta_rechazo(
+                request_update.rejection_reason or "No se pudo procesar el pedido", 
+                negocio_name or "Nuestro negocio"
+            )
+            twilio_client = Client(
+                os.environ.get("TWILIO_ACCOUNT_SID"),
+                os.environ.get("TWILIO_AUTH_TOKEN")
+            )
+            twilio_number = os.environ.get("TWILIO_PHONE_NUMBER")
+            cliente_number = updated.get("request_phone_number", "")
+            if not cliente_number.startswith("whatsapp:"):
+                cliente_number = f"whatsapp:{cliente_number}"
+            msg = twilio_client.messages.create(
+                from_=twilio_number,
+                body=respuesta,
+                to=cliente_number
+            )
+            print(f"Mensaje de rechazo enviado via Twilio. SID: {msg.sid}", flush=True)
+        except Exception as e:
+            print(f"Error enviando mensaje de rechazo por Twilio: {e}", flush=True)
+
     return updated
