@@ -176,12 +176,18 @@ async def twilio_webhook(request: Request):
                 status="Pending",
                 rejection_reason=None
             )
-            await create_whatsapp_request(conn, id_business, req_data)
+            try:
+                saved = await create_whatsapp_request(conn, id_business, req_data)
+                print(f"Pedido guardado en BD con id={saved.get('id_request')}", flush=True)
+            except Exception as db_err:
+                print(f"ERROR al guardar pedido en BD: {db_err}", flush=True)
 
         return {"status": "ok"}
 
     except Exception as e:
+        import traceback
         print(f"Error en webhook: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
         return {"status": "error", "detail": str(e)}
 
 
