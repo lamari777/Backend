@@ -1,7 +1,7 @@
 import os
 import json
 import asyncpg
-from fastapi import APIRouter, Request, Depends, HTTPException, status
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, status
 from openai import AsyncOpenAI
 
 from app.db.database import get_pool
@@ -107,6 +107,47 @@ async def resolver_productos_con_catalogo(mensaje: str, catalogo: list[str]) -> 
         return []
 
 
+async def generar_respuesta_aclaracion(items: list[dict], nombre_negocio: str) -> str:
+    problemas = []
+    for item in items:
+        solicitado = item.get("solicitado", "")
+        coincidencias = item.get("coincidencias", [])
+        if len(coincidencias) > 1:
+            opciones = ", ".join(f"'{c}'" for c in coincidencias)
+            problemas.append(f"- Para '{solicitado}' tenemos varias opciones: {opciones}.")
+        elif len(coincidencias) == 0:
+            problemas.append(f"- No hemos encontrado '{solicitado}' en nuestro catálogo.")
+            
+    if not problemas:
+        return ""
+        
+    texto_problemas = "\n".join(problemas)
+    
+    prompt_sistema = (
+        f"Eres el asistente virtual por WhatsApp del negocio '{nombre_negocio}'. "
+        "Un cliente ha hecho un pedido, pero algunos productos no están claros. "
+        "Redacta un mensaje amable, directo y corto para el cliente, explicándole las dudas que tenemos "
+        "y preguntándole qué opciones prefiere de las que le indicamos. "
+        "Muestra las opciones de forma clara. Si algo no existe en el catálogo, díselo educadamente.\n"
+        "IMPORTANTE: Devuelve ÚNICAMENTE el texto del mensaje que se enviará por WhatsApp al cliente, sin comillas adicionales ni texto introductorio tuyo."
+    )
+    
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": f"Esta es la información de los productos dudosos:\n{texto_problemas}"}
+            ],
+            temperature=0.3,
+            max_tokens=250
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error generando aclaración con IA: {e}", flush=True)
+        return "Hola, hemos recibido tu pedido pero tenemos dudas con algunos productos. ¿Podrías confirmarnos exactamente qué deseas de nuestro catálogo?"
+
+
 @router.post("/webhook")
 async def twilio_webhook(request: Request):
     try:
@@ -181,6 +222,15 @@ async def twilio_webhook(request: Request):
                 print(f"Pedido guardado en BD con id={saved.get('id_request')}", flush=True)
             except Exception as db_err:
                 print(f"ERROR al guardar pedido en BD: {db_err}", flush=True)
+
+            if tiene_ambiguo or tiene_no_encontrado:
+                print("Generando respuesta de aclaración con IA...", flush=True)
+                respuesta_texto = await generar_respuesta_aclaracion(items_resueltos, negocio['name_business'])
+                xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+                <Response>
+                    <Message>{respuesta_texto}</Message>
+                </Response>"""
+                return Response(content=xml_response, media_type="application/xml")
 
         return {"status": "ok"}
 
