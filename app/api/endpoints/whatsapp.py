@@ -174,6 +174,31 @@ async def generar_respuesta_rechazo(razon_rechazo: str, nombre_negocio: str) -> 
         return f"Hola, lamentablemente no hemos podido aceptar tu pedido en este momento. Motivo: {razon_rechazo}. Disculpa las molestias."
 
 
+async def generar_respuesta_aceptado(nombre_negocio: str) -> str:
+    prompt_sistema = (
+        f"Eres el asistente virtual por WhatsApp del negocio '{nombre_negocio}'. "
+        "El dueño acaba de aceptar el pedido de un cliente y ya está todo listo. "
+        "Redacta un mensaje amable, directo y corto para el cliente, confirmándole que su pedido "
+        "ha sido aceptado correctamente y que puede venir a recogerlo cuando desee.\n"
+        "IMPORTANTE: Devuelve ÚNICAMENTE el texto del mensaje que se enviará por WhatsApp al cliente, sin comillas adicionales ni texto introductorio tuyo."
+    )
+    
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": prompt_sistema},
+                {"role": "user", "content": "Genera el mensaje de confirmación."}
+            ],
+            temperature=0.3,
+            max_tokens=200
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error generando aceptación con IA: {e}", flush=True)
+        return "¡Hola! Tu pedido ha sido aceptado correctamente y está todo listo. Puedes pasar a recogerlo cuando quieras. ¡Gracias!"
+
+
 @router.post("/webhook")
 async def twilio_webhook(request: Request):
     try:
@@ -240,9 +265,9 @@ async def twilio_webhook(request: Request):
                 print("Generando respuesta de aclaración con IA...", flush=True)
                 respuesta_texto = await generar_respuesta_aclaracion(items_resueltos, negocio['name_business'])
                 xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Message>{respuesta_texto}</Message>
-</Response>"""
+                <Response>
+                    <Message>{respuesta_texto}</Message>
+                </Response>"""
                 return Response(content=xml_response, media_type="application/xml")
 
             req_data = WhatsAppRequestCreate(
@@ -304,7 +329,9 @@ async def actualizar_estado_pedido(
                 os.environ.get("TWILIO_ACCOUNT_SID"),
                 os.environ.get("TWILIO_AUTH_TOKEN")
             )
-            twilio_number = os.environ.get("TWILIO_PHONE_NUMBER")
+            twilio_number = os.environ.get("TWILIO_PHONE_NUMBER", "")
+            if twilio_number and not twilio_number.startswith("whatsapp:"):
+                twilio_number = f"whatsapp:{twilio_number}"
             cliente_number = updated.get("request_phone_number", "")
             if not cliente_number.startswith("whatsapp:"):
                 cliente_number = f"whatsapp:{cliente_number}"
@@ -316,5 +343,31 @@ async def actualizar_estado_pedido(
             print(f"Mensaje de rechazo enviado via Twilio. SID: {msg.sid}", flush=True)
         except Exception as e:
             print(f"Error enviando mensaje de rechazo por Twilio: {e}", flush=True)
+
+    elif request_update.status == "Accepted":
+        try:
+            negocio_name = await conn.fetchval("SELECT name_business FROM business WHERE id_business = $1", id_business)
+            respuesta = await generar_respuesta_aceptado(negocio_name or "Nuestro negocio")
+            
+            twilio_client = Client(
+                os.environ.get("TWILIO_ACCOUNT_SID"),
+                os.environ.get("TWILIO_AUTH_TOKEN")
+            )
+            twilio_number = os.environ.get("TWILIO_PHONE_NUMBER", "")
+            if twilio_number and not twilio_number.startswith("whatsapp:"):
+                twilio_number = f"whatsapp:{twilio_number}"
+                
+            cliente_number = updated.get("request_phone_number", "")
+            if not cliente_number.startswith("whatsapp:"):
+                cliente_number = f"whatsapp:{cliente_number}"
+                
+            msg = twilio_client.messages.create(
+                from_=twilio_number,
+                body=respuesta,
+                to=cliente_number
+            )
+            print(f"Mensaje de aceptación enviado via Twilio. SID: {msg.sid}", flush=True)
+        except Exception as e:
+            print(f"Error enviando mensaje de aceptación por Twilio: {e}", flush=True)
 
     return updated
