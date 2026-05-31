@@ -170,7 +170,7 @@ async def twilio_webhook(request: Request):
             tiene_ambiguo = any(len(item.get("coincidencias", [])) > 1 for item in items_resueltos)
 
             req_data = WhatsAppRequestCreate(
-                request_phone_number=telefono_cliente,
+                request_phone_number=telefono_cliente.replace("whatsapp:", ""),
                 message_id=message_id,
                 json_summary=items_resueltos,
                 status="Pending",
